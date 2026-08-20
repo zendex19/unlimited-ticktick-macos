@@ -101,13 +101,15 @@ resolve_source_app() {
   fi
 
   if [[ -f "$input" ]]; then
-    local plist
-    plist="$(hdiutil attach "$input" -nobrowse -readonly -plist 2>/dev/null)" || {
+    local mount_dir
+    mount_dir="$(mktemp -d "/tmp/ticktick-dmg.XXXXXX")"
+    if ! hdiutil attach "$input" -nobrowse -readonly -mountpoint "$mount_dir" >/dev/null 2>&1; then
+      rmdir "$mount_dir" >/dev/null 2>&1 || true
       echo "Could not mount disk image: $input" >&2
       exit 1
-    }
-    MOUNT_POINT="$(printf '%s' "$plist" | plutil -extract system-entities.0.mount-point raw -o - - 2>/dev/null || true)"
-    if [[ -z "$MOUNT_POINT" || ! -d "$MOUNT_POINT" ]]; then
+    fi
+    MOUNT_POINT="$mount_dir"
+    if [[ ! -d "$MOUNT_POINT" ]]; then
       echo "Could not mount DMG: $input" >&2
       exit 1
     fi
